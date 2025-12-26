@@ -2,6 +2,7 @@ from flask import Flask, render_template, request
 import pickle
 import pandas as pd
 import os
+import difflib
 
 app = Flask(__name__)
 
@@ -50,21 +51,31 @@ except FileNotFoundError as e:
 # --- RECOMMENDATION LOGIC ---
 def recommend(movie_title):
     if movies is None or similarity is None:
-        return ["System Error: Data files missing or corrupted."]
+        return ["System Error: Data files missing."]
     
     try:
-        # 1. Find the index of the movie (case-insensitive)
-        matches = movies[movies['Title'].str.lower() == movie_title.lower()]
+        # 1. Get all movie titles from the dataset
+        all_titles = movies['Title'].tolist()
         
-        if matches.empty:
-            return ["Movie not found. Please check the spelling."]
+        # 2. Find the closest match to what the user typed
+        # n=1 means "give me the single best match"
+        # cutoff=0.4 means "it doesn't have to be perfect, just kinda close"
+        find_close_match = difflib.get_close_matches(movie_title, all_titles, n=1, cutoff=0.4)
+        
+        # If no close match found
+        if not find_close_match:
+            return ["Movie not found. Please check spelling."]
             
-        index = matches.index[0]
+        # Use the closest match found
+        closest_match = find_close_match[0]
         
-        # 2. Get similarity scores
+        # 3. Find the index of that closest match
+        index = movies[movies['Title'] == closest_match].index[0]
+        
+        # 4. Get similarity scores
         distances = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda x: x[1])
         
-        # 3. Get top 6 recommendations (skip index 0, which is the movie itself)
+        # 5. Get top 6 recommendations
         recommended_movie_names = []
         for i in distances[1:7]:
             recommended_movie_names.append(movies.iloc[i[0]].Title)
