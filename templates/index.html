@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kino. | Intelligent Discovery</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <div class="ambient-light light-1"></div>
+    <div class="ambient-light light-2"></div>
+
+    <div class="container {% if recommendations %}results-mode{% else %}center-mode{% endif %}">
+        
+       <header>
+            <h1 class="brand">KINO<span class="dot">.</span></h1>
+            <p class="tagline">Focus on what to watch next.</p>
+        </header>
+
+        <div class="search-container glass">
+            <form action="/" method="POST">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        name="movie_name" 
+                        placeholder="Enter a movie name..." 
+                        value="{{ query if query else '' }}" 
+                        autocomplete="off" 
+                        required
+                    >
+                    <button type="submit">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        {% if recommendations %}
+        <div class="results-grid">
+            <div class="results-header">
+                <h2>Top Picks For You</h2>
+            </div>
+            
+            {% for movie in recommendations %}
+            <a href="https://www.imdb.com/find?q={{ movie }}" target="_blank" class="card-link">
+                
+                <div class="movie-card glass animate-card" style="animation-delay: {{ (loop.index0 * 0.1) + 0.4 }}s">
+                    <div class="card-content">
+                        <span class="rank">#{{ loop.index }}</span>
+                        <h3 class="movie-title">{{ movie }}</h3>
+                    </div>
+
+                    <div class="card-action">
+                        <span class="imdb-tag">IMDb</span>
+                        <svg class="icon-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg>
+                    </div>
+                    
+                    <div class="card-decoration"></div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+    </div>
+
+</body>
+</html>
