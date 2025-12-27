@@ -50,40 +50,64 @@ except FileNotFoundError as e:
 
 # --- RECOMMENDATION LOGIC ---
 def recommend(movie_title):
+    # 0. Safety Check
     if movies is None or similarity is None:
         return ["System Error: Data files missing."]
     
-    try:
-        # 1. Get all movie titles from the dataset
-        all_titles = movies['Title'].tolist()
+    # --- STEP 1: NORMALIZE INPUT ---
+    # Convert to lowercase and strip whitespace
+    query = movie_title.lower().strip()
+    
+    # Get all titles and make a lowercase version for searching
+    all_titles = movies['Title'].tolist()
+    lower_titles = [t.lower() for t in all_titles]
+    
+    # --- STEP 2: SUBSTRING SEARCH (For "Half Names") ---
+    # Looks for the user's query INSIDE the movie title
+    # e.g., "dark knight" will match "The Dark Knight"
+    substring_matches = [
+        title for title, lower in zip(all_titles, lower_titles) 
+        if query in lower
+    ]
+    
+    # If we found substring matches, use the shortest one (usually the most accurate)
+    if substring_matches:
+        # Sort by length so "Iron Man" comes before "Iron Man 3"
+        closest_match = sorted(substring_matches, key=len)[0]
+    
+    else:
+        # --- STEP 3: FUZZY SEARCH (For "Typos") ---
+        # Only runs if Substring Search failed.
+        # e.g., "Avengrs" won't be a substring, but difflib will find it.
+        # cutoff=0.4 allows for "loose" matching
+        fuzzy_matches = difflib.get_close_matches(query, lower_titles, n=1, cutoff=0.4)
         
-        # 2. Find the closest match to what the user typed
-        # n=1 means "give me the single best match"
-        # cutoff=0.4 means "it doesn't have to be perfect, just kinda close"
-        find_close_match = difflib.get_close_matches(movie_title, all_titles, n=1, cutoff=0.4)
-        
-        # If no close match found
-        if not find_close_match:
+        if not fuzzy_matches:
             return ["Movie not found. Please check spelling."]
-            
-        # Use the closest match found
-        closest_match = find_close_match[0]
         
-        # 3. Find the index of that closest match
+        # We need to map the lowercase fuzzy match back to the original Title
+        # (Because 'fuzzy_matches' gives us the lowercase version)
+        match_index = lower_titles.index(fuzzy_matches[0])
+        closest_match = all_titles[match_index]
+
+    # --- STEP 4: RETRIEVE RECOMMENDATIONS ---
+    try:
+        # Find the index of the closest match
         index = movies[movies['Title'] == closest_match].index[0]
         
-        # 4. Get similarity scores
+        # Get similarity scores
         distances = sorted(list(enumerate(similarity[index])), reverse=True, key=lambda x: x[1])
         
-        # 5. Get top 6 recommendations
+        # Get top 6 recommendations
         recommended_movie_names = []
         for i in distances[1:7]:
             recommended_movie_names.append(movies.iloc[i[0]].Title)
             
         return recommended_movie_names
-
+        
     except Exception as e:
         return [f"An error occurred: {str(e)}"]
+    
 
 # --- ROUTES ---
 @app.route('/', methods=['GET', 'POST'])
@@ -100,3 +124,4 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
